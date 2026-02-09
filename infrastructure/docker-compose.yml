@@ -62,7 +62,6 @@ services:
       - "8080:8080"  # Traefik Dashboard
     volumes:
       - /run/user/1000/podman/podman.sock:/var/run/docker.sock:ro,z
-    user: "1000:1000"
     networks:
       - kanban-network
 
