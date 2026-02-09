@@ -26,16 +26,6 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Copy the built application from builder stage
 COPY --from=builder /app/dist/frontend/browser /usr/share/nginx/html
 
-# Create a non-root user for security
-RUN addgroup -S angular && adduser -S angular -G angular && \
-    chown -R angular:angular /usr/share/nginx/html && \
-    chown -R angular:angular /var/cache/nginx && \
-    touch /var/run/nginx.pid && \
-    chown -R angular:angular /var/run/nginx.pid
-
-# Switch to non-root user
-USER angular:angular
-
 # Expose port 80
 EXPOSE 80
 
