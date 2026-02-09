@@ -54,6 +54,7 @@ services:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=kanban-network"
       - "--entrypoints.web.address=:80"
       - "--log.level=INFO"
     ports:
