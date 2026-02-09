@@ -100,6 +100,12 @@ services:
       - backend
     networks:
       - kanban-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider --quiet http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend.rule=Host(`app.localhost`)"
