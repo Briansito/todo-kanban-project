@@ -1,7 +1,7 @@
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     container_name: kanban-postgres
     environment:
       POSTGRES_DB: kanban_db
@@ -48,20 +48,23 @@ services:
 
   # Traefik Reverse Proxy
   traefik:
-    image: traefik:v3.2
+    image: docker.io/library/traefik:v3.2
     container_name: kanban-traefik
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
+      - "--providers.docker.endpoint=unix:///run/podman.sock"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=kanban-network"
-      - "--entrypoints.web.address=:80"
-      - "--log.level=INFO"
+      - "--entrypoints.web.address=:8000"
+      -  "--log.level=INFO"
     ports:
-      - "80:80"
+      - "8000:8000"
       - "8080:8080"  # Traefik Dashboard
     volumes:
-      - /run/user/1000/podman/podman.sock:/var/run/docker.sock:ro,z
+      - ${XDG_RUNTIME_DIR}/podman/podman.sock:/run/podman.sock:ro
+    security_opt:
+      - label=disable
     networks:
       - kanban-network
 
