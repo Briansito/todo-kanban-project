@@ -1,7 +1,7 @@
 package com.todokanban.infrastructure.adapter.in.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.todokanban.application.ports.input.CreateBoardUseCase;
+import com.todokanban.application.ports.input.GetBoardUseCase;
 import com.todokanban.application.ports.input.MoveCardUseCase;
 import com.todokanban.domain.model.*;
 import com.todokanban.infrastructure.config.GlobalExceptionHandler;
@@ -12,12 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-// TestJsonConverter provides a Jackson converter with JavaTimeModule registered
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -26,8 +26,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Unit tests for {@link BoardController} using standalone MockMvc
- * (no Spring context needed — zero startup overhead).
+ * Unit tests for {@link BoardController} using standalone MockMvc.
+ * Security filter chain is NOT active in standalone mode — no @WithMockUser needed.
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("BoardController")
@@ -35,7 +35,8 @@ class BoardControllerTest {
 
     MockMvc mockMvc;
     @Mock CreateBoardUseCase createBoardUseCase;
-    @Mock MoveCardUseCase   moveCardUseCase;
+    @Mock GetBoardUseCase    getBoardUseCase;
+    @Mock MoveCardUseCase    moveCardUseCase;
 
     private static final UUID WORKSPACE_ID = UUID.randomUUID();
     private static final UUID BOARD_ID     = UUID.randomUUID();
@@ -46,7 +47,7 @@ class BoardControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new BoardController(createBoardUseCase, moveCardUseCase))
+                .standaloneSetup(new BoardController(createBoardUseCase, getBoardUseCase, moveCardUseCase))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(TestJsonConverter.create())
                 .build();
@@ -58,6 +59,31 @@ class BoardControllerTest {
                 "Sprint Board", "desc", List.of(),
                 Instant.now(), Instant.now());
     }
+
+    // ── GET ───────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("GET /api/v1/boards/{boardId} → 200 OK")
+    void getBoard_returns200() throws Exception {
+        given(getBoardUseCase.getBoard(any())).willReturn(stubBoard());
+
+        mockMvc.perform(get("/api/v1/boards/{bid}", BOARD_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(BOARD_ID.toString()))
+                .andExpect(jsonPath("$.name").value("Sprint Board"));
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/boards/{boardId} when not found → 404")
+    void getBoard_notFound_returns404() throws Exception {
+        given(getBoardUseCase.getBoard(any()))
+                .willThrow(new NoSuchElementException("Board not found"));
+
+        mockMvc.perform(get("/api/v1/boards/{bid}", BOARD_ID))
+                .andExpect(status().isNotFound());
+    }
+
+    // ── POST ──────────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("POST /api/v1/boards → 201 Created")
@@ -84,6 +110,8 @@ class BoardControllerTest {
                             """.formatted(WORKSPACE_ID)))
                 .andExpect(status().isBadRequest());
     }
+
+    // ── PATCH ─────────────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("PATCH /{boardId}/cards/{cardId}/move → 200 OK with body")
