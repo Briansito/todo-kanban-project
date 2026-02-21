@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -38,6 +39,26 @@ public class GlobalExceptionHandler {
         log.warn("Bad request: {}", ex.getMessage());
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(
                 HttpStatus.BAD_REQUEST, ex.getMessage());
+        problem.setTitle("Bad Request");
+        problem.setType(URI.create("https://api.todokanban.com/errors/bad-request"));
+        problem.setProperty("timestamp", Instant.now());
+        return problem;
+    }
+
+    /**
+     * Handles malformed JSON or deserialization failures.
+     *
+     * <p>When a record's compact constructor throws {@link IllegalArgumentException}
+     * during Jackson deserialization, Jackson wraps it in this exception.
+     * We unwrap the root cause to return a user-friendly 400.</p>
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail handleNotReadable(HttpMessageNotReadableException ex) {
+        Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+        String detail = cause.getMessage() != null ? cause.getMessage() : "Malformed or invalid request body";
+        log.warn("Not readable: {}", detail);
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST, detail);
         problem.setTitle("Bad Request");
         problem.setType(URI.create("https://api.todokanban.com/errors/bad-request"));
         problem.setProperty("timestamp", Instant.now());

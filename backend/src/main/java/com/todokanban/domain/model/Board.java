@@ -116,6 +116,57 @@ public final class Board {
         return column;
     }
 
+    /**
+     * Adds a new {@link Card} to the specified column.
+     *
+     * @throws IllegalArgumentException if the column is not found in this board
+     */
+    public void addCardToColumn(ColumnId columnId, Card card) {
+        Objects.requireNonNull(card, "Card must not be null");
+        Column column = findColumn(columnId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Column '%s' not found in board '%s'".formatted(columnId, id)));
+        card.updatePosition(column.getCards().size());
+        column.addCard(card);
+        this.updatedAt = Instant.now();
+    }
+
+    /**
+     * Updates the title and/or description of a card within a column.
+     * Pass {@code null} for any field to leave it unchanged.
+     *
+     * @throws IllegalArgumentException if the column or card is not found
+     */
+    public void updateCard(ColumnId columnId, CardId cardId, String title, String description) {
+        Column column = findColumn(columnId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Column '%s' not found in board '%s'".formatted(columnId, id)));
+        Card card = column.findCard(cardId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Card '%s' not found in column '%s'".formatted(cardId, columnId)));
+        if (title != null && !title.isBlank()) {
+            card.updateTitle(title);
+        }
+        if (description != null) {
+            card.updateDescription(description);
+        }
+        this.updatedAt = Instant.now();
+    }
+
+    /**
+     * Removes a card from the specified column.
+     *
+     * @throws IllegalArgumentException if the column or card is not found
+     */
+    public void removeCardFromColumn(ColumnId columnId, CardId cardId) {
+        Column column = findColumn(columnId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Column '%s' not found in board '%s'".formatted(columnId, id)));
+        column.removeCard(cardId);
+        this.updatedAt = Instant.now();
+    }
+
+
     public Optional<Column> findColumn(ColumnId columnId) {
         Objects.requireNonNull(columnId, "ColumnId must not be null");
         return columns.stream()
